@@ -160,9 +160,13 @@ def co2_to_influx(zone):
         df = pd.DataFrame([data])
         df = df.set_index("datetime")
         client.write_points(df, "co2")
-        print('Fetched CO2 values')
+        print(datetime.datetime.now().isoformat(), "Fetched CO2 values")
     else:
-        print("Fetch CO2 failed with status", str(response.status_code))
+        print(
+            datetime.datetime.now().isoformat(),
+            "Fetch CO2 failed with status",
+            str(response.status_code),
+        )
 
 
 if __name__ == "__main__":
