@@ -14,15 +14,18 @@ from pathlib import Path
 import json
 import pandas as pd
 from flatten_dict import flatten
+from os import environ
+import requests
 import schedule
 import functools
+from os import environ
 
 from utils.parsers import PARSER_KEY_TO_DICT
 
 env_path = Path(".") / "secrets.env"
 load_dotenv(dotenv_path=env_path)
 
-verbose = False # Print query results?
+verbose = False  # Print query results?
 
 # Decorator for supressing errors during runtime
 def catch_exceptions(cancel_on_failure=False):
@@ -142,7 +145,25 @@ def parse_to_influx(zone, data_type, target_datetime):
             )
         )
     else:
-        print(datetime.datetime.now().isoformat(),'Fetched', data_type, zone)
+        print(datetime.datetime.now().isoformat(), "Fetched", data_type, zone)
+
+
+@catch_exceptions(cancel_on_failure=False)
+def co2_to_influx(zone):
+    response = requests.get(
+        "https://api.co2signal.com/v1/latest?countryCode=" + zone,
+        headers={"auth-token": environ["CO2SIGNAL_TOKEN"]},
+    )
+    if response.status_code == 200:
+        data = json.loads(response.text)["data"]
+        data["datetime"] = datetime.datetime.now().utcnow()
+        df = pd.DataFrame([data])
+        df = df.set_index("datetime")
+        client.write_points(df, "co2")
+        print('Fetched CO2 values')
+    else:
+        print("Fetch CO2 failed with status", str(response.status_code))
+
 
 if __name__ == "__main__":
     # Connect to database
@@ -182,6 +203,7 @@ if __name__ == "__main__":
     schedule.every(15).minutes.do(
         parse_to_influx, zone="AT", data_type="consumption", target_datetime=None
     )
+    schedule.every(15).minutes.do(co2_to_influx, zone="AT")
 
     # Initial run on script startup
     schedule.run_all()
