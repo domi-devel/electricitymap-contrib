@@ -34,7 +34,7 @@ def catch_exceptions(cancel_on_failure=False):
             except:
                 import traceback
 
-                print(datetime.datetime.now().isoformat, traceback.format_exc())
+                print(datetime.datetime.now().isoformat(), traceback.format_exc())
                 if cancel_on_failure:
                     return schedule.CancelJob
 
